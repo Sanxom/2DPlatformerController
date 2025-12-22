@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a22fda1e8bde5914eb6a33f3718889a2, type: 3}
+  m_Name: Player Movement Stats
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMovementStats
+  <MaxWalkSpeed>k__BackingField: 12.5
+  <GroundAcceleration>k__BackingField: 5
+  <GroundDeceleration>k__BackingField: 20
+  <AirAcceleration>k__BackingField: 5
+  <AirdDeceleration>k__BackingField: 5
+  <MaxRunSpeed>k__BackingField: 20
+  <GroundLayer>k__BackingField:
+    serializedVersion: 2
+    m_Bits: 64
+  <GroundDetectionRayLength>k__BackingField: 0.02
+  <HeadDetectionRayLength>k__BackingField: 0.02
+  <HeadWidth>k__BackingField: 0.75
+  <JumpHeight>k__BackingField: 6.5
+  <JumpHeightCompensationFactor>k__BackingField: 1.054
+  <TimeUntilJumpApex>k__BackingField: 0.35
+  <GravityOnReleaseMultiplier>k__BackingField: 2
+  <MaxFallSpeed>k__BackingField: 26
+  <NumOfJumpsAllowed>k__BackingField: 2
+  <TimeForUpwardsCancel>k__BackingField: 0.027
+  <ApexThreshold>k__BackingField: 0.97
+  <ApexHangTime>k__BackingField: 0.075
+  <JumpBufferTime>k__BackingField: 0.125
+  <JumpCoyoteTime>k__BackingField: 0.1
+  <DebugShowIsGroundedBox>k__BackingField: 1
+  <DebugShowHeadBumpBox>k__BackingField: 1
+  <ShowWalkJumpArc>k__BackingField: 0
+  <ShowRunJumpArc>k__BackingField: 0
+  <StopOnCollision>k__BackingField: 1
+  <DrawRight>k__BackingField: 1
+  <ArcResolution>k__BackingField: 20
+  <VisualizationSteps>k__BackingField: 90
+  <Gravity>k__BackingField: -111.85307
+  <InitialJumpVelocity>k__BackingField: 39.148575
+  <AdjustedJumpHeight>k__BackingField: 6.8510003

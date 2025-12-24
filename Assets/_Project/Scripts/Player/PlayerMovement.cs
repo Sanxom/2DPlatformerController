@@ -16,8 +16,11 @@ public class PlayerMovement : MonoBehaviour
     [Header("Collision Check")]
     private RaycastHit2D _groundHit;
     private RaycastHit2D _headHit;
+    private RaycastHit2D _wallHit;
+    private RaycastHit2D _lastWallHit;
     private bool _isGrounded;
     private bool _bumpedHead;
+    private bool _isTouchingWall;
 
     [Header("Jump")]
     public float VerticalVelocity { get; private set; }
@@ -39,6 +42,23 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Coyote Time")]
     private float _coyoteTimer;
+
+    [Header("Wall Slide")]
+    private bool _isWallSliding;
+    private bool _isWallSlideFalling;
+
+    [Header("Wall Jump")]
+    private float _wallJumpTime;
+    private float _wallJumpFastFallTime;
+    private float _wallJumpFastFallReleaseSpeed;
+    private float _wallJumpPostBufferTimer;
+    private float _wallJumpApexPoint;
+    private float _timePastWallJumpApexThreshold;
+    private bool _useWallJumpMoveStats;
+    private bool _isWallJumping;
+    private bool _isWallJumpFastFalling;
+    private bool _isWallJumpFalling;
+    private bool _isPastWallJumpApexThreshold;
 
     #region Unity Callbacks
     private void Awake()

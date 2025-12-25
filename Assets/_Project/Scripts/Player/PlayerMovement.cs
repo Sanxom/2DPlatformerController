@@ -10,7 +10,7 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody2D _rb;
 
     [Header("Movement")]
-    private Vector2 _moveVelocity;
+    [field: SerializeField] public float HorizontalVelocity { get; private set; }
     private bool _isFacingRight;
 
     [Header("Collision Check")]
@@ -60,6 +60,17 @@ public class PlayerMovement : MonoBehaviour
     private bool _isWallJumpFalling;
     private bool _isPastWallJumpApexThreshold;
 
+    [Header("Dash")]
+    private Vector2 _dashDirection;
+    private float _dashTimer;
+    private float _dashOnGroundTimer;
+    private float _dashFastFallTime;
+    private float _dashFastFallReleaseSpeed;
+    private int _numOfDashesUsed;
+    private bool _isDashing;
+    private bool _isAirDashing;
+    private bool _isDashFastFalling;
+
     #region Unity Callbacks
     private void Awake()
     {
@@ -71,17 +82,21 @@ public class PlayerMovement : MonoBehaviour
     {
         CountTimers();
         JumpChecks();
+        LandCheck();
     }
 
     private void FixedUpdate()
     {
         CollisionChecks();
         Jump();
+        Fall();
 
         if (_isGrounded)
             Move(MoveStats.GroundAcceleration, MoveStats.GroundDeceleration, InputManager.Instance.MoveVector);
         else
             Move(MoveStats.AirAcceleration, MoveStats.AirdDeceleration, InputManager.Instance.MoveVector);
+
+        ApplyVelocity();
     }
 
     private void OnDrawGizmos()
@@ -94,44 +109,39 @@ public class PlayerMovement : MonoBehaviour
     }
     #endregion
 
+    private void ApplyVelocity()
+    {
+        // CLAMP FALL SPEED
+        VerticalVelocity = Mathf.Clamp(VerticalVelocity, -MoveStats.MaxFallSpeed, 50f);
+        _rb.linearVelocity = new Vector2(HorizontalVelocity, VerticalVelocity);
+    }
+
     #region Movement
     private void Move(float acceleration, float deceleration, Vector2 moveInput)
     {
-        if (moveInput != Vector2.zero)
+        if (Mathf.Abs(moveInput.x) >= MoveStats.MoveThreshold)
         {
             TurnCheck(moveInput);
 
-            Vector2 targetVelocity = Vector2.zero;
+            float targetVelocity;
 
             if (InputManager.Instance.RunIsHeld)
-            {
-                targetVelocity = new Vector2(moveInput.x, 0f) * MoveStats.MaxRunSpeed;
-            }
+                targetVelocity = moveInput.x * MoveStats.MaxRunSpeed;
             else
-            {
-                targetVelocity = new Vector2(moveInput.x, 0f) * MoveStats.MaxWalkSpeed;
-            }
+                targetVelocity = moveInput.x * MoveStats.MaxWalkSpeed;
 
-            _moveVelocity = Vector2.Lerp(_moveVelocity, targetVelocity, acceleration * Time.fixedDeltaTime);
-            _rb.linearVelocity = new(_moveVelocity.x, _rb.linearVelocity.y);
+            HorizontalVelocity = Mathf.Lerp(HorizontalVelocity, targetVelocity, acceleration * Time.fixedDeltaTime);
         }
-        else if (moveInput == Vector2.zero)
-        {
-            _moveVelocity = Vector2.Lerp(_moveVelocity, Vector2.zero, deceleration * Time.fixedDeltaTime);
-            _rb.linearVelocity = new(_moveVelocity.x, _rb.linearVelocity.y);
-        }
+        else if (Mathf.Abs(moveInput.x) < MoveStats.MoveThreshold)
+            HorizontalVelocity = Mathf.Lerp(HorizontalVelocity, 0f, deceleration * Time.fixedDeltaTime);
     }
 
     private void TurnCheck(Vector2 moveInput)
     {
         if (_isFacingRight && moveInput.x < 0)
-        {
             Turn(false);
-        }
         else if (!_isFacingRight && moveInput.x > 0)
-        {
             Turn(true);
-        }
     }
 
     private void Turn (bool turnRight)
@@ -145,6 +155,35 @@ public class PlayerMovement : MonoBehaviour
         {
             _isFacingRight = false;
             transform.Rotate(0f, -180f, 0f);
+        }
+    }
+    #endregion
+
+    #region Land/Fall
+    private void LandCheck()
+    {
+        // LANDED
+        if ((_isJumping || _isFalling) && _isGrounded && VerticalVelocity <= 0f)
+        {
+            _isJumping = false;
+            _isFalling = false;
+            _isFastFalling = false;
+            _fastFallTime = 0f;
+            _isPastApexThreshold = false;
+            _numOfJumpsUsed = 0;
+            VerticalVelocity = Physics2D.gravity.y;
+        }
+    }
+
+    private void Fall()
+    {
+        // NORMAL GRAVITY WHILE FALLING
+        if (!_isGrounded && !_isJumping)
+        {
+            if (!_isFalling)
+                _isFalling = true;
+
+            VerticalVelocity += MoveStats.Gravity * Time.fixedDeltaTime;
         }
     }
     #endregion
@@ -208,18 +247,6 @@ public class PlayerMovement : MonoBehaviour
                 _isFastFalling = false;
             }
         }
-
-        // LANDED
-        if ((_isJumping || _isFalling) && _isGrounded && VerticalVelocity <= 0f)
-        {
-            _isJumping = false;
-            _isFalling = false;
-            _isFastFalling = false;
-            _fastFallTime = 0f;
-            _isPastApexThreshold = false;
-            _numOfJumpsUsed = 0;
-            VerticalVelocity = Physics2D.gravity.y;
-        }
     }
 
     private void InitiateJump(int numOfJumpsUsed)
@@ -265,7 +292,7 @@ public class PlayerMovement : MonoBehaviour
                 }
 
                 // GRAVITY ON ASCENDING BUT NOT PAST APEX THRESHOLD
-                else
+                else if (!_isFastFalling)
                 {
                     VerticalVelocity += MoveStats.Gravity * Time.fixedDeltaTime;
                     if (_isPastApexThreshold)
@@ -294,20 +321,11 @@ public class PlayerMovement : MonoBehaviour
 
             _fastFallTime += Time.fixedDeltaTime;
         }
-
-        // NORMAL GRAVITY WHILE FALLING
-        if (!_isGrounded && !_isJumping)
-        {
-            if (!_isFalling)
-                _isFalling = true;
-
-            VerticalVelocity += MoveStats.Gravity * Time.fixedDeltaTime;
-        }
-
-        // CLAMP FALL SPEED
-        VerticalVelocity = Mathf.Clamp(VerticalVelocity, -MoveStats.MaxFallSpeed, 50f);
-        _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, VerticalVelocity);
     }
+    #endregion
+
+    #region Wall Slide
+
     #endregion
 
     #region Collision Checks
@@ -410,6 +428,7 @@ public class PlayerMovement : MonoBehaviour
 
             drawPoint = startPosition + displacement;
 
+            #region Debug Visualization
             if (MoveStats.StopOnCollision)
             {
                 RaycastHit2D hit = Physics2D.Raycast(previousPosition, drawPoint - previousPosition, Vector2.Distance(previousPosition, drawPoint), MoveStats.GroundLayer);
@@ -422,14 +441,61 @@ public class PlayerMovement : MonoBehaviour
             }
 
             Gizmos.DrawLine(previousPosition, drawPoint);
+            #endregion
+
             previousPosition = drawPoint;
         }
+    }
+
+    private void IsTouchingWall()
+    {
+        float originEndPoint;
+        if (_isFacingRight)
+            originEndPoint = _bodyCollider.bounds.max.x;
+        else
+            originEndPoint = _bodyCollider.bounds.min.x;
+
+        float adjustedHeight = _bodyCollider.bounds.size.y * MoveStats.WallDetectionRayHeightMultiplier;
+
+        Vector2 boxCastOrigin = new(originEndPoint, _bodyCollider.bounds.center.y);
+        Vector2 boxCastSize = new(MoveStats.WallDetectionRayLength, adjustedHeight);
+
+        _wallHit = Physics2D.BoxCast(boxCastOrigin, boxCastSize, 0f, transform.right, MoveStats.WallDetectionRayLength, MoveStats.GroundLayer);
+        if (_wallHit.collider != null)
+        {
+            _lastWallHit = _wallHit;
+            _isTouchingWall = true;
+        }
+        else
+            _isTouchingWall = false;
+
+        #region Debug Visualization
+        if (MoveStats.DebugShowWallHitBox)
+        {
+            Color rayColor;
+            if (_isTouchingWall)
+                rayColor = Color.green;
+            else
+                rayColor = Color.red;
+
+            Vector2 boxBottomLeft = new(boxCastOrigin.x - boxCastSize.x * 0.5f, boxCastOrigin.y - boxCastSize.y * 0.5f);
+            Vector2 boxBottomRight = new(boxCastOrigin.x + boxCastSize.x * 0.5f, boxCastOrigin.y - boxCastSize.y * 0.5f);
+            Vector2 boxTopLeft = new(boxCastOrigin.x - boxCastSize.x * 0.5f, boxCastOrigin.y + boxCastSize.y * 0.5f);
+            Vector2 boxTopRight = new(boxCastOrigin.x + boxCastSize.x * 0.5f, boxCastOrigin.y + boxCastSize.y * 0.5f);
+
+            Debug.DrawLine(boxBottomLeft, boxBottomRight, rayColor);
+            Debug.DrawLine(boxBottomRight, boxTopRight, rayColor);
+            Debug.DrawLine(boxTopRight, boxTopLeft, rayColor);
+            Debug.DrawLine(boxTopLeft, boxBottomLeft, rayColor);
+        }
+        #endregion
     }
 
     private void CollisionChecks()
     {
         IsGrounded();
         BumpedHead();
+        IsTouchingWall();
     }
     #endregion
 

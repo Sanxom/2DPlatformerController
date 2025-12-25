@@ -4,6 +4,7 @@ using UnityEngine;
 public class PlayerMovementStats : ScriptableObject
 {
     [field: Header("Walk")]
+    [field: SerializeField, Range(0f, 1f)] public float MoveThreshold { get; private set; } = 0.25f;
     [field: SerializeField, Range(1f, 100f)] public float MaxWalkSpeed { get; private set; } = 12.5f;
     [field: SerializeField, Range(0.25f, 50f)] public float GroundAcceleration { get; private set; } = 5f;
     [field: SerializeField, Range(0.25f, 50f)] public float GroundDeceleration { get; private set; } = 20f;

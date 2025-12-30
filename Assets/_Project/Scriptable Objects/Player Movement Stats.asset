@@ -12,37 +12,63 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a22fda1e8bde5914eb6a33f3718889a2, type: 3}
   m_Name: Player Movement Stats
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovementStats
+  <MoveThreshold>k__BackingField: 0.25
   <MaxWalkSpeed>k__BackingField: 12.5
   <GroundAcceleration>k__BackingField: 5
   <GroundDeceleration>k__BackingField: 20
   <AirAcceleration>k__BackingField: 5
   <AirdDeceleration>k__BackingField: 5
+  <WallJumpMoveAcceleration>k__BackingField: 5
+  <WallJumpMoveDeceleration>k__BackingField: 5
   <MaxRunSpeed>k__BackingField: 20
   <GroundLayer>k__BackingField:
     serializedVersion: 2
     m_Bits: 64
-  <GroundDetectionRayLength>k__BackingField: 0.02
-  <HeadDetectionRayLength>k__BackingField: 0.02
-  <HeadWidth>k__BackingField: 0.75
+  <UseHeadBumpSlide>k__BackingField: 1
+  <HeadBumpSlideSpeed>k__BackingField: 13
+  <HeadBumpBoxWidth>k__BackingField: 0.3
+  <HeadBumpBoxHeight>k__BackingField: 0.1
   <JumpHeight>k__BackingField: 6.5
   <JumpHeightCompensationFactor>k__BackingField: 1.054
   <TimeUntilJumpApex>k__BackingField: 0.35
   <GravityOnReleaseMultiplier>k__BackingField: 2
   <MaxFallSpeed>k__BackingField: 26
-  <NumOfJumpsAllowed>k__BackingField: 2
+  <NumOfAirJumpsAllowed>k__BackingField: 1
+  <ResetJumpsOnWallSlide>k__BackingField: 1
   <TimeForUpwardsCancel>k__BackingField: 0.027
   <ApexThreshold>k__BackingField: 0.97
   <ApexHangTime>k__BackingField: 0.075
   <JumpBufferTime>k__BackingField: 0.125
   <JumpCoyoteTime>k__BackingField: 0.1
-  <DebugShowIsGroundedBox>k__BackingField: 1
-  <DebugShowHeadBumpBox>k__BackingField: 1
+  <WallSlideSpeed>k__BackingField: 5
+  <WallSlideDecelerationSpeed>k__BackingField: 50
+  <WallJumpDirection>k__BackingField: {x: -20, y: 6.5}
+  <WallJumpPostBufferTime>k__BackingField: 0.125
+  <WallJumpGravityOnReleaseMultiplier>k__BackingField: 1
+  <DashTime>k__BackingField: 0.11
+  <DashSpeed>k__BackingField: 40
+  <TimeBetweenDashesOnGround>k__BackingField: 0.225
+  <ResetDashOnWallSlide>k__BackingField: 1
+  <NumOfDashes>k__BackingField: 2
+  <DashDiagonallyBias>k__BackingField: 0.4
+  <DashBufferTime>k__BackingField: 0.125
+  <DashTargetApexHeight>k__BackingField: 5.599998
+  <DashGravityOnReleaseMultiplier>k__BackingField: 1
+  <DashTimeForUpwardsCancel>k__BackingField: 0.027
+  <DebugShowIsGrounded>k__BackingField: 0
+  <DebugShowHeadRays>k__BackingField: 1
+  <DebugShowWallHit>k__BackingField: 1
+  <DebugShowHeadBumpBox>k__BackingField: 0
+  <ExtraRayDebugDistance>k__BackingField: 0.25
   <ShowWalkJumpArc>k__BackingField: 0
   <ShowRunJumpArc>k__BackingField: 0
   <StopOnCollision>k__BackingField: 1
-  <DrawRight>k__BackingField: 1
+  <DrawRight>k__BackingField: 0
   <ArcResolution>k__BackingField: 20
   <VisualizationSteps>k__BackingField: 90
   <Gravity>k__BackingField: -111.85307
   <InitialJumpVelocity>k__BackingField: 39.148575
   <AdjustedJumpHeight>k__BackingField: 6.8510003
+  <WallJumpGravity>k__BackingField: -111.85307
+  <InitialWallJumpVelocity>k__BackingField: 39.148575
+  <AdjustedWallJumpHeight>k__BackingField: 6.8510003

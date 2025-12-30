@@ -18,11 +18,12 @@ public class PlayerMovementStats : ScriptableObject
 
     [field: Header("Ground/Collision Checks")]
     [field: SerializeField] public LayerMask GroundLayer { get; private set; }
-    [field: SerializeField] public float GroundDetectionRayLength { get; private set; } = 0.02f;
-    [field: SerializeField] public float HeadDetectionRayLength { get; private set; } = 0.02f;
-    [field: SerializeField, Range(0f, 1f)] public float HeadWidth { get; private set; } = 0.75f;
-    [field: SerializeField] public float WallDetectionRayLength { get; private set; } = 0.125f;
-    [field: SerializeField, Range(0.01f, 2f)] public float WallDetectionRayHeightMultiplier { get; private set; } = 0.9f;
+
+    [field: Header("Head Bump Slide")]
+    [field: SerializeField] public bool UseHeadBumpSlide { get; private set; } = true;
+    [field: SerializeField, Range(1f, 50f)] public float HeadBumpSlideSpeed { get; private set; } = 13f;
+    [field: SerializeField, Range(0.01f, 1f)] public float HeadBumpBoxWidth { get; private set; } = 0.3f;
+    [field: SerializeField, Range(0.01f, 1f)] public float HeadBumpBoxHeight { get; private set; } = 0.1f;
 
     [field: Header("Jump")]
     [field: SerializeField] public float JumpHeight { get; private set; } = 6.5f;
@@ -30,7 +31,7 @@ public class PlayerMovementStats : ScriptableObject
     [field: SerializeField] public float TimeUntilJumpApex { get; private set; } = 0.35f;
     [field: SerializeField, Range(0.01f, 5f)] public float GravityOnReleaseMultiplier { get; private set; } = 2f;
     [field: SerializeField] public float MaxFallSpeed { get; private set; } = 26f;
-    [field: SerializeField, Range(1, 5)] public float NumOfJumpsAllowed { get; private set; } = 2;
+    [field: SerializeField, Range(0, 5)] public float NumOfAirJumpsAllowed { get; private set; } = 1;
 
     [field: Header("Reset Jump Options")]
     [field: SerializeField] public bool ResetJumpsOnWallSlide { get; private set; } = true;
@@ -64,15 +65,19 @@ public class PlayerMovementStats : ScriptableObject
     [field: SerializeField] public bool ResetDashOnWallSlide { get; private set; } = true;
     [field: SerializeField, Range(0, 5)] public int NumOfDashes { get; private set; } = 2;
     [field: SerializeField, Range(0f, 0.5f)] public float DashDiagonallyBias { get; private set; } = 0.4f;
+    [field: SerializeField, Range(0f, 1f)] public float DashBufferTime { get; private set; } = 0.125f;
+    [field: SerializeField] public float DashTargetApexHeight { get; private set; }
 
     [field: Header("Dash Cancel Time")]
     [field: SerializeField, Range(0.01f, 5f)] public float DashGravityOnReleaseMultiplier { get; private set; } = 1f;
     [field: SerializeField, Range(0.02f, 0.3f)] public float DashTimeForUpwardsCancel { get; private set; } = 0.027f;
 
     [field: Header("Debug")]
-    [field: SerializeField] public bool DebugShowIsGroundedBox { get; private set; }
+    [field: SerializeField] public bool DebugShowIsGrounded { get; private set; }
+    [field: SerializeField] public bool DebugShowHeadRays { get; private set; }
+    [field: SerializeField] public bool DebugShowWallHit { get; private set; }
     [field: SerializeField] public bool DebugShowHeadBumpBox { get; private set; }
-    [field: SerializeField] public bool DebugShowWallHitBox { get; private set; }
+    [field: SerializeField, Range(0f, 1f)] public float ExtraRayDebugDistance { get; private set; } = 0.25f;
 
     [field: Header("Jump Visualization Tool")]
     [field: SerializeField] public bool ShowWalkJumpArc { get; private set; } = false;
@@ -92,7 +97,7 @@ public class PlayerMovementStats : ScriptableObject
         new(-1, 0),  // Left
         new Vector2(-1, -1).normalized, // Down-Left
         new(0, -1),  // Down
-        new Vector2(1, -1).normalized  // Down-Right
+        new Vector2(1, -1).normalized   // Down-Right
     };
 
     [field: Header("Gravity")]
@@ -117,14 +122,23 @@ public class PlayerMovementStats : ScriptableObject
 
     public void CalculateValues()
     {
-        // Jump
+        // JUMP
         AdjustedJumpHeight = JumpHeight * JumpHeightCompensationFactor;
         Gravity = -(2f * AdjustedJumpHeight) / Mathf.Pow(TimeUntilJumpApex, 2f);
         InitialJumpVelocity = Mathf.Abs(Gravity) * TimeUntilJumpApex;
 
-        // Wall Jump
+        // WALL JUMP
         AdjustedWallJumpHeight = WallJumpDirection.y * JumpHeightCompensationFactor;
         WallJumpGravity = -(2f * AdjustedWallJumpHeight) / Mathf.Pow(TimeUntilJumpApex, 2f);
         InitialWallJumpVelocity = Mathf.Abs(WallJumpGravity) * TimeUntilJumpApex;
+
+        // DASH
+        float step = Time.fixedDeltaTime;
+        float dashTimeRounded = Mathf.Ceil(DashTime / step) * step;
+        float dashCancelTimeRounded = Mathf.Ceil(DashTimeForUpwardsCancel / step) * step;
+
+        float dashConstantPhaseHeight = DashSpeed * dashTimeRounded;
+        float dashCancelPhaseHeight = 0.5f * DashSpeed * dashCancelTimeRounded;
+        DashTargetApexHeight = dashConstantPhaseHeight + dashCancelPhaseHeight;
     }
 }

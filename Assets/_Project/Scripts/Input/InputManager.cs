@@ -10,11 +10,13 @@ public class InputManager : MonoBehaviour
     public bool JumpIsHeld { get; private set; }
     public bool JumpWasReleased { get; private set; }
     public bool RunIsHeld { get; private set; }
+    public bool DashWasPressed { get; private set; }
 
     private GameInput _gameInput;
     private InputAction _moveAction;
     private InputAction _sprintAction;
     private InputAction _jumpAction;
+    private InputAction _dashAction;
 
     private void Awake()
     {
@@ -28,6 +30,7 @@ public class InputManager : MonoBehaviour
         _moveAction = _gameInput.Gameplay.Move;
         _sprintAction = _gameInput.Gameplay.Sprint;
         _jumpAction = _gameInput.Gameplay.Jump;
+        _dashAction = _gameInput.Gameplay.Dash;
     }
 
     private void OnEnable()
@@ -44,6 +47,8 @@ public class InputManager : MonoBehaviour
         JumpWasReleased = _jumpAction.WasReleasedThisFrame();
 
         RunIsHeld = _sprintAction.IsPressed();
+
+        DashWasPressed = _dashAction.WasPressedThisFrame();
     }
 
     private void OnDisable()

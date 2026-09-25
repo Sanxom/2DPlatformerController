@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -6,12 +7,14 @@ public class PlayerMovement : MonoBehaviour
     [Header("References")]
     [field: SerializeField] public PlayerMovementStats MoveStats { get; private set; }
     [SerializeField] private Collider2D _collider;
+    [SerializeField] private Transform _visualsTransform;
 
     private Rigidbody2D _rb;
 
     [Header("Movement")]
     public bool IsFacingRight { get; private set; }
     public MovementController Controller { get; private set; }
+
     public Vector2 velocity;
 
     [Header("Input")]
@@ -63,6 +66,7 @@ public class PlayerMovement : MonoBehaviour
     private bool _isPastWallJumpApexThreshold;
 
     [Header("Dash")]
+    public bool IsDashing { get; private set; }
     private Vector2 _dashDirection;
     private float _dashTimer;
     private float _dashOnGroundTimer;
@@ -70,17 +74,20 @@ public class PlayerMovement : MonoBehaviour
     private float _dashFastFallReleaseSpeed;
     private float _dashBufferTimer;
     private int _numOfDashesUsed;
-    private bool _isDashing;
     private bool _isAirDashing;
     private bool _isDashFastFalling;
 
     [Header("Head Bump Slide")]
+    public bool IsHeadBumpSliding { get; private set; }
     private float _jumpStartY;
     private float _dashStartY;
-    private int _headBumpSlideDirection;
-    private bool _isHeadBumpSliding;
     private bool _justFinishedSlide;
     private bool _headBumpSlideFromDash;
+    private bool _didHeadBumpSlideThisAirborneState;
+
+    [Header("Slope")]
+    private bool _isPerformingSlopeDash;
+    private float _slopeDashAngle;
     #endregion
 
     #region Unity Callbacks
@@ -102,6 +109,8 @@ public class PlayerMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
+        Controller.PollSensors(velocity * Time.fixedDeltaTime);
+
         _justFinishedSlide = false;
 
         CountTimers(Time.fixedDeltaTime);
@@ -111,6 +120,7 @@ public class PlayerMovement : MonoBehaviour
         WallJumpCheck();
         WallSlideCheck();
         DashCheck();
+        VelocityReset();
 
         HandleHorizontalMovement(Time.fixedDeltaTime);
         HandleHeadBumpSlide();
@@ -119,6 +129,7 @@ public class PlayerMovement : MonoBehaviour
         WallJump(Time.fixedDeltaTime);
         Dash(Time.fixedDeltaTime);
         Fall(Time.fixedDeltaTime);
+        HandleSlide(Time.fixedDeltaTime);
 
         ClampVelocity();
         Controller.Move(velocity * Time.fixedDeltaTime);
@@ -142,18 +153,10 @@ public class PlayerMovement : MonoBehaviour
     #region Movement
     private void HandleHorizontalMovement(float timeStep)
     {
-        if (_isHeadBumpSliding) return;
+        if (IsHeadBumpSliding) return;
 
-        if (!_isDashing)
+        if (!IsDashing)
         {
-            TurnCheck(_moveInput);
-            float targetVelocityX = 0f;
-            if (Mathf.Abs(_moveInput.x) >= MoveStats.MoveThreshold)
-            {
-                float moveDirection = Mathf.Sign(_moveInput.x);
-                targetVelocityX = _runIsHeld ? moveDirection * MoveStats.MaxRunSpeed : moveDirection * MoveStats.MaxWalkSpeed;
-            }
-
             float acceleration = Controller.IsGrounded() ? MoveStats.GroundAcceleration : MoveStats.AirAcceleration;
             float deceleration = Controller.IsGrounded() ? MoveStats.GroundDeceleration : MoveStats.AirdDeceleration;
 
@@ -164,9 +167,25 @@ public class PlayerMovement : MonoBehaviour
             }
 
             if (Mathf.Abs(_moveInput.x) >= MoveStats.MoveThreshold)
+            {
+                TurnCheck(_moveInput);
+                float moveDirection = Mathf.Sign(_moveInput.x);
+                float targetVelocityX = _runIsHeld ? moveDirection * MoveStats.MaxRunSpeed : moveDirection * MoveStats.MaxWalkSpeed;
+
+                float t = Mathf.Clamp01(acceleration * timeStep);
                 velocity.x = Mathf.Lerp(velocity.x, targetVelocityX, acceleration * timeStep);
+
+                if (Mathf.Abs(velocity.x - targetVelocityX) <= 0.01f)
+                    velocity.x = targetVelocityX;
+            }
             else
-                velocity.x = Mathf.Lerp(velocity.x, 0f, deceleration * timeStep);
+            {
+                float t = Mathf.Clamp01(deceleration * timeStep);
+                velocity.x = Mathf.Lerp(velocity.x, 0f, t);
+
+                if (Mathf.Abs(velocity.x) <= 0.01f)
+                    velocity.x = 0f;
+            }
         }
     }
 
@@ -183,43 +202,52 @@ public class PlayerMovement : MonoBehaviour
         if (turnRight)
         {
             IsFacingRight = true;
-            transform.Rotate(0f, 180f, 0f);
+            _visualsTransform.Rotate(0f, 180f, 0f);
         }
         else
         {
             IsFacingRight = false;
-            transform.Rotate(0f, -180f, 0f);
+            _visualsTransform.Rotate(0f, -180f, 0f);
         }
     }
 
     private void ClampVelocity()
     {
-        // CLAMP FALL SPEED
-        if (!_isDashing)
-            velocity.y = Mathf.Clamp(velocity.y, -MoveStats.MaxFallSpeed, 50f);
-        else
+        if (Controller.IsSliding)
+            velocity.y = Mathf.Clamp(velocity.y, -MoveStats.SlideSpeed, 50f);
+        else if (IsDashing)
             velocity.y = Mathf.Clamp(velocity.y, -50f, 50f);
+        else
+            velocity.y = Mathf.Clamp(velocity.y, -MoveStats.MaxFallSpeed, 50f);
+
     }
 
     private void HandleHeadBumpSlide()
     {
-        if (!_isHeadBumpSliding 
-            && (_isJumping || _isDashing || _isWallJumping) 
+        if (!IsHeadBumpSliding 
+            && !_didHeadBumpSlideThisAirborneState 
+            && !Controller.IsTouchingWall()
+            && (_isJumping || IsDashing || _isWallJumping) 
             && Controller.BumpedHead() 
-            && !Controller.IsHittingBothCorners 
-            && !Controller.IsHittingCeilingCenter)
+            && !Controller.State.IsHittingBothCorners 
+            && !Controller.State.IsHittingCeilingCenter)
         {
-            _isHeadBumpSliding = true;
-            _headBumpSlideDirection = Controller.HeadBumpSlideDirection;
+            if (_isWallSliding || Controller.IsSliding) return;
+
+            if (Controller.State.CeilingAngle <= MoveStats.MaxSlopeAngleForHeadBump)
+            {
+                IsHeadBumpSliding = true;
+                _didHeadBumpSlideThisAirborneState = true;
+            }
         }
 
-        if (_isHeadBumpSliding)
+        if (IsHeadBumpSliding)
         {
             velocity.y = 0f;
 
-            if (Controller.HeadBumpSlideDirection == 0 || !Controller.BumpedHead() || Controller.IsHittingCeilingCenter || Controller.IsHittingBothCorners)
+            if (Controller.State.HeadBumpSlideDirection == 0 || !Controller.BumpedHead() || Controller.State.IsHittingCeilingCenter || Controller.State.IsHittingBothCorners)
             {
-                _isHeadBumpSliding = false;
+                IsHeadBumpSliding = false;
                 velocity.x = 0f;
 
                 if (!_headBumpSlideFromDash)
@@ -250,7 +278,7 @@ public class PlayerMovement : MonoBehaviour
                 _justFinishedSlide = true;
             }
             else
-                velocity.x = _headBumpSlideDirection * MoveStats.HeadBumpSlideSpeed;
+                velocity.x = Controller.State.HeadBumpSlideDirection * MoveStats.HeadBumpSlideSpeed;
         }
     }
     #endregion
@@ -260,36 +288,50 @@ public class PlayerMovement : MonoBehaviour
     {
         if (Controller.IsGrounded())
         {
+            bool isGroundAWall = Controller.State.SlopeAngle >= MoveStats.MinAngleForWallSlide && Controller.State.SlopeAngle <= MoveStats.MaxAngleForWallSlide;
+            if (isGroundAWall) return;
+
             // LANDED
-            if ((_isJumping || _isFalling || _isWallJumpFalling || _isWallJumping || _isWallSlideFalling || _isWallSliding || _isDashFastFalling || _isHeadBumpSliding)
+            if ((_isJumping || _isFalling || _isWallJumpFalling || _isWallJumping || _isWallSlideFalling || _isWallSliding || _isDashFastFalling || IsHeadBumpSliding)
                 && velocity.y <= 0f)
             {
-                _isHeadBumpSliding = false;
+                IsHeadBumpSliding = false;
+                _didHeadBumpSlideThisAirborneState = false;
                 ResetJumpValues();
                 StopWallSlide();
                 ResetWallJumpValues();
                 ResetDashes();
                 ResetDashValues();
-
-                _numOfAirJumpsUsed = 0;
             }
 
-            // KEEP Y-VELOCITY CONSTANT WHILE ON GROUND
-            if (velocity.y <= 0f)
-                velocity.y = STANDARD_GRAVITY_RATE;
+            bool isStable = Controller.State.SlopeAngle <= MoveStats.MaxSlopeAngle;
+            bool isWedged = Controller.State.IsAgainstWall;
+
+            if (MoveStats.ResetAirJumpsOnMaxSlopeLand || isStable || isWedged)
+                _numOfAirJumpsUsed = 0;
         }
     }
 
     private void Fall(float timeStep)
     {
         // NORMAL GRAVITY WHILE FALLING
-        if (!Controller.IsGrounded() && !_isJumping && !_isWallSliding && !_isWallJumping && !_isDashing && !_isDashFastFalling)
+        if (!Controller.IsGrounded() && !_isJumping && !_isWallSliding && !_isWallJumping && !IsDashing && !_isDashFastFalling)
         {
             if (!_isFalling)
                 _isFalling = true;
 
             velocity.y += MoveStats.Gravity * timeStep;
         }
+    }
+
+    private void VelocityReset()
+    {
+        if (Controller.IsSliding) return;
+
+        if (Controller.IsGrounded() 
+            && !IsSlideableSlope(Controller.State.SlopeAngle) 
+            && velocity.y <= 0f)
+            velocity.y = -2f;
     }
     #endregion
 
@@ -310,7 +352,7 @@ public class PlayerMovement : MonoBehaviour
         {
             if (_isWallSlideFalling && _wallJumpPostBufferTimer >= 0f) 
                 return;
-            else if (_isWallSliding || (Controller.IsTouchingWall(IsFacingRight) && !Controller.IsGrounded())) 
+            else if (_isWallSliding || (Controller.IsTouchingWall() && (!Controller.IsGrounded() || Controller.IsSliding || Controller.State.IsAgainstSteepSlope))) 
                 return;
 
             _jumpBufferTimer = MoveStats.JumpBufferTime;
@@ -342,8 +384,8 @@ public class PlayerMovement : MonoBehaviour
 
         if (_jumpBufferTimer > 0f)
         {
-            // SINGLE JUMP
-            if (!_isJumping && (Controller.IsGrounded() || _coyoteTimer > 0f))
+            // INITIATE SINGLE JUMP WITH JUMP BUFFERING AND COYOTE TIME
+            if (!_isJumping && (Controller.IsGrounded() || _coyoteTimer > 0f) && (MoveStats.CanJumpOnMaxSlopes || Controller.State.SlopeAngle <= MoveStats.MaxSlopeAngle))
             {
                 InitiateJump(0);
 
@@ -355,8 +397,8 @@ public class PlayerMovement : MonoBehaviour
             }
 
             // DOUBLE JUMP
-            else if ((_isJumping || _isWallJumping || _isWallSlideFalling || _isAirDashing || _isDashFastFalling) 
-                && !Controller.IsTouchingWall(IsFacingRight) 
+            else if ((_isJumping || _isWallJumping || _isWallSlideFalling || _isAirDashing || _isDashFastFalling || Controller.IsSliding) 
+                && !Controller.IsTouchingWall() 
                 && _numOfAirJumpsUsed < MoveStats.NumOfAirJumpsAllowed)
             {
                 _isFastFalling = false;
@@ -380,11 +422,14 @@ public class PlayerMovement : MonoBehaviour
         if (!_isJumping)
             _isJumping = true;
 
+        _jumpWasPressed = false;
+
         ResetWallJumpValues();
 
         _jumpBufferTimer = 0f;
         _numOfAirJumpsUsed += numOfAirJumpsUsed;
         velocity.y = MoveStats.InitialJumpVelocity;
+        _didHeadBumpSlideThisAirborneState = false;
 
         _jumpStartY = _rb.position.y;
     }
@@ -395,10 +440,15 @@ public class PlayerMovement : MonoBehaviour
         if (_isJumping)
         {
             // CHECK FOR HEAD BUMP
-            if (Controller.BumpedHead() && !_isHeadBumpSliding)
+            if (Controller.BumpedHead() && !IsHeadBumpSliding)
             {
-                if (Controller.HeadBumpSlideDirection != 0 && !Controller.IsHittingCeilingCenter && !Controller.IsHittingBothCorners)
+                if (Controller.State.HeadBumpSlideDirection != 0 && !Controller.State.IsHittingCeilingCenter && !Controller.State.IsHittingBothCorners)
                     _headBumpSlideFromDash = false;
+                else if (MoveStats.JumpFollowSlopesWhenHeadTouching && Controller.State.CeilingAngle > 0f)
+                {
+                    Vector2 ceilingNormal = Controller.State.CeilingNormal;
+                    velocity -= (Vector2.Dot(velocity, ceilingNormal) * ceilingNormal);
+                }
                 else
                 {
                     velocity.y = 0f;
@@ -406,7 +456,7 @@ public class PlayerMovement : MonoBehaviour
                 }
             }
 
-            if (_isHeadBumpSliding)
+            if (IsHeadBumpSliding)
             {
                 velocity.y = 0f;
                 return;
@@ -474,7 +524,10 @@ public class PlayerMovement : MonoBehaviour
     #region Wall Slide
     private void WallSlideCheck()
     {
-        if (Controller.IsTouchingWall(IsFacingRight) && !Controller.IsGrounded() && !_isDashing)
+        bool isTouchingSideWall = Controller.IsTouchingWall();
+        bool isSideWallAngle = Controller.State.WallAngle >= MoveStats.MinAngleForWallSlide && Controller.State.WallAngle <= MoveStats.MaxAngleForWallSlide;
+
+        if (!IsDashing && isTouchingSideWall && isSideWallAngle && !Controller.IsGrounded())
         {
             if (velocity.y < 0f && !_isWallSliding)
             {
@@ -494,7 +547,7 @@ public class PlayerMovement : MonoBehaviour
                 }
             }
         }
-        else if (_isWallSliding && !Controller.IsTouchingWall(IsFacingRight) && !Controller.IsGrounded() && !_isWallSlideFalling)
+        else if (_isWallSliding && !isTouchingSideWall)
         {
             _isWallSlideFalling = true;
             StopWallSlide();
@@ -519,9 +572,13 @@ public class PlayerMovement : MonoBehaviour
     #region Wall Jump
     private bool ShouldApplyPostWallJumpBuffer()
     {
-        if (Controller.IsTouchingWall(IsFacingRight) || _isWallSliding)
+        bool isWallAngleValid = Controller.State.WallAngle >= MoveStats.MinAngleForWallSlide && Controller.State.WallAngle <= MoveStats.MaxAngleForWallSlide;
+
+        if (Controller.IsTouchingWall() && isWallAngleValid || _isWallSliding)
         {
-            _lastWallDirection = Controller.GetWallDirection();
+            if (Controller.State.WallDirection != 0)
+                _lastWallDirection = Controller.GetWallDirection();
+
             return true;
         }
         else
@@ -547,7 +604,7 @@ public class PlayerMovement : MonoBehaviour
             _wallJumpPostBufferTimer = MoveStats.WallJumpPostBufferTime;
 
         // WALL JUMP FAST FALLING
-        if (_jumpWasReleased && !_isWallSliding && !Controller.IsTouchingWall(IsFacingRight) && _isWallJumping)
+        if (_jumpWasReleased && !_isWallSliding && !Controller.IsTouchingWall() && _isWallJumping)
         {
             if (velocity.y > 0f)
             {
@@ -568,7 +625,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
         // ACTUAL JUMP WITH POST WALL JUMP BUFFER TIME
-        if (_jumpWasPressed && _wallJumpPostBufferTimer > 0f)
+        if (!Controller.IsGrounded() && _jumpWasPressed && _wallJumpPostBufferTimer > 0f)
         {
             InitiateWallJump();
         }
@@ -582,12 +639,15 @@ public class PlayerMovement : MonoBehaviour
             _useWallJumpMoveStats = true;
         }
 
+        _jumpWasPressed = false;
+
         StopWallSlide();
         ResetJumpValues();
         _wallJumpTime = 0f;
 
         velocity.y = MoveStats.InitialWallJumpVelocity;
-        velocity.x = Mathf.Abs(MoveStats.WallJumpDirection.x) * -_lastWallDirection;
+        velocity.x = Mathf.Abs(MoveStats.WallJumpDirection.x) * _lastWallDirection;
+        _didHeadBumpSlideThisAirborneState = false;
 
         _jumpStartY = _rb.position.y;
     }
@@ -603,10 +663,15 @@ public class PlayerMovement : MonoBehaviour
                 _useWallJumpMoveStats = false;
 
             // HIT HEAD
-            if (Controller.BumpedHead() && !_isHeadBumpSliding)
+            if (Controller.BumpedHead() && !IsHeadBumpSliding)
             {
-                if (Controller.HeadBumpSlideDirection != 0 && !Controller.IsHittingCeilingCenter && !Controller.IsHittingBothCorners)
+                if (Controller.State.HeadBumpSlideDirection != 0 && !Controller.State.IsHittingCeilingCenter && !Controller.State.IsHittingBothCorners)
                     _headBumpSlideFromDash = false;
+                else if (MoveStats.JumpFollowSlopesWhenHeadTouching && Controller.State.CeilingAngle > 0f)
+                {
+                    Vector2 ceilingNormal = Controller.State.CeilingNormal;
+                    velocity = velocity - (Vector2.Dot(velocity, ceilingNormal) * ceilingNormal);
+                }
                 else
                 {
                     velocity.y = 0f;
@@ -615,7 +680,7 @@ public class PlayerMovement : MonoBehaviour
                 }
             }
 
-            if (_isHeadBumpSliding)
+            if (IsHeadBumpSliding)
             {
                 velocity.y = 0f;
                 return;
@@ -690,6 +755,7 @@ public class PlayerMovement : MonoBehaviour
         _dashFastFallReleaseSpeed = 0f;
         _dashFastFallTime = 0f;
         _dashDirection = Vector2.zero;
+        _isPerformingSlopeDash = false;
     }
 
     private void ResetDashes()
@@ -705,14 +771,14 @@ public class PlayerMovement : MonoBehaviour
         if (_dashBufferTimer > 0f)
         {
             // GROUND DASH
-            if (Controller.IsGrounded() && _dashOnGroundTimer < 0 && !_isDashing)
+            if (Controller.IsGrounded() && _dashOnGroundTimer < 0 && !IsDashing)
             {
                 InitiateDash();
                 _dashBufferTimer = 0f;
             }
 
             // AIR DASH
-            else if (!Controller.IsGrounded() && !_isDashing && _numOfDashesUsed < MoveStats.NumOfDashes)
+            else if (!Controller.IsGrounded() && !IsDashing && _numOfDashesUsed < MoveStats.NumOfDashes)
             {
                 _isAirDashing = true;
                 InitiateDash();
@@ -723,6 +789,8 @@ public class PlayerMovement : MonoBehaviour
 
     private void InitiateDash()
     {
+        _dashWasPressed = false;
+
         _dashStartY = _rb.position.y;
 
         _dashDirection = _moveInput;
@@ -767,38 +835,55 @@ public class PlayerMovement : MonoBehaviour
 
         _dashDirection = closestDirection;
         _numOfDashesUsed++;
-        _isDashing = true;
+        IsDashing = true;
         _dashTimer = 0f;
         _dashOnGroundTimer = MoveStats.TimeBetweenDashesOnGround;
 
         ResetJumpValues();
         ResetWallJumpValues();
         StopWallSlide();
+
+        if (_dashDirection.y > 0f)
+            _didHeadBumpSlideThisAirborneState = false;
+
+        _isPerformingSlopeDash = Controller.IsGrounded() 
+            && Controller.State.SlopeAngle > 0f 
+            && _dashDirection.y == 0f 
+            && !_isJumping 
+            && Mathf.Sign(_dashDirection.x) != Mathf.Sign(Controller.State.SlopeNormal.x);
+
+        if (_isPerformingSlopeDash)
+            _slopeDashAngle = Controller.State.SlopeAngle;
     }
 
     private void Dash(float timeStep)
     {
         if (_justFinishedSlide) return;
 
-        if (_isDashing)
+        if (IsDashing)
         {
-            if (Controller.BumpedHead() && !_isHeadBumpSliding)
+            if (Controller.BumpedHead() && !IsHeadBumpSliding)
             {
-                if (Controller.HeadBumpSlideDirection != 0 && !Controller.IsHittingCeilingCenter && !Controller.IsHittingBothCorners)
+                if (Controller.State.HeadBumpSlideDirection != 0 && !Controller.State.IsHittingCeilingCenter && !Controller.State.IsHittingBothCorners)
                 {
                     _headBumpSlideFromDash = true;
                     _dashTimer = 0f;
                 }
+                else if (MoveStats.DashFollowSlopesWhenHeadTouching && Controller.State.CeilingAngle > 0f)
+                {
+                    Vector2 ceilingNormal = Controller.State.CeilingNormal;
+                    velocity -= (Vector2.Dot(velocity, ceilingNormal) * ceilingNormal);
+                }
                 else
                 {
                     velocity.y = 0f;
-                    _isDashing = false;
+                    IsDashing = false;
                     _isAirDashing = false;
                     _dashTimer = 0f;
                 }
             }
 
-            if (_isHeadBumpSliding)
+            if (IsHeadBumpSliding)
             {
                 velocity.y = 0f;
                 return;
@@ -812,7 +897,7 @@ public class PlayerMovement : MonoBehaviour
                     ResetDashes();
 
                 _isAirDashing = false;
-                _isDashing = false;
+                IsDashing = false;
 
                 if (!_isJumping && !_isWallJumping)
                 {
@@ -821,17 +906,38 @@ public class PlayerMovement : MonoBehaviour
 
                     if (!Controller.IsGrounded())
                         _isDashFastFalling = true;
+                    else
+                        velocity.y = 0f;
                 }
 
                 return;
             }
 
-            velocity.x = MoveStats.DashSpeed * _dashDirection.x;
+            if (MoveStats.DashDirectionMatchesSlopeDireciton && _isPerformingSlopeDash)
+            {
+                velocity.x = Mathf.Cos(_slopeDashAngle * Mathf.Deg2Rad) * MoveStats.DashSpeed * _dashDirection.x;
+                velocity.y = Mathf.Sin(_slopeDashAngle * Mathf.Deg2Rad) * MoveStats.DashSpeed;
+            }
+            else
+            {
+                velocity.x = MoveStats.DashSpeed * _dashDirection.x;
 
-            if (_dashDirection.y != 0f || _isAirDashing)
-                velocity.y = MoveStats.DashSpeed * _dashDirection.y;
-            else if (!_isJumping && _dashDirection.y == 0f)
-                velocity.y = -0.001f;
+                if (_dashDirection.y != 0f || _isAirDashing)
+                    velocity.y = MoveStats.DashSpeed * _dashDirection.y;
+                else if (!_isJumping && _dashDirection.y == 0f)
+                    velocity.y = -0.001f;
+            }
+
+            #region Debug Dash Angle Visualization
+            if (MoveStats.DebugShowDashAngle)
+            {
+                Vector2 drawOrigin = _collider.bounds.center;
+                Vector2 drawDirection = velocity.normalized;
+                float drawLength = MoveStats.ExtraRayDebugDistance * 4f;
+
+                Debug.DrawRay(drawOrigin, drawDirection * drawLength, Color.cyan);
+            }
+            #endregion
         }
 
         // HANDLE DASH CUT TIME
@@ -848,6 +954,19 @@ public class PlayerMovement : MonoBehaviour
             }
             else
                 velocity.y += MoveStats.Gravity * MoveStats.DashGravityOnReleaseMultiplier * timeStep;
+        }
+    }
+    #endregion
+
+    #region Slide
+    private void HandleSlide(float timeStep)
+    {
+        if (Controller.IsSliding)
+        {
+            if (_isJumping) return;
+            if (_isWallJumping) return;
+
+            velocity.y += MoveStats.Gravity * timeStep;
         }
     }
     #endregion
@@ -915,6 +1034,12 @@ public class PlayerMovement : MonoBehaviour
     }
     #endregion
 
+    #region Helper Methods
+    public bool IsSlideableSlope(float slopeAngle) => slopeAngle >= MoveStats.MaxSlopeAngle && slopeAngle < MoveStats.MinAngleForWallSlide;
+    public bool IsWalkableSlope(float slopeAngle) => slopeAngle <= MoveStats.MaxSlopeAngle && slopeAngle < MoveStats.MinAngleForWallSlide;
+    public bool IsWallSlideable(float slopeAngle) => slopeAngle >= MoveStats.MinAngleForWallSlide && slopeAngle <= MoveStats.MaxAngleForWallSlide;
+    #endregion
+
     #region Timers
     private void CountTimers(float timeStep)
     {
@@ -922,20 +1047,30 @@ public class PlayerMovement : MonoBehaviour
         _jumpBufferTimer -= timeStep;
 
         // JUMP COYOTE TIMER
-        if (!Controller.IsGrounded())
-            _coyoteTimer -= timeStep;
-        else
-            _coyoteTimer = MoveStats.JumpCoyoteTime;
+        HandleCoyoteTimer(timeStep);
 
         // WALL JUMP BUFFER TIMER
         _wallJumpPostBufferTimer -= timeStep;
 
         // DASH TIMER
-        if (Controller.IsGrounded())
-            _dashOnGroundTimer -= timeStep;
+        HandleDashOnGroundTimer(timeStep);
 
         // DASH BUFFER TIMER
         _dashBufferTimer -= timeStep;
+    }
+
+    private void HandleCoyoteTimer(float timeStep)
+    {
+        if (Controller.IsGrounded() && !Controller.IsSliding)
+            _coyoteTimer = MoveStats.JumpCoyoteTime;
+        else
+            _coyoteTimer -= timeStep;
+    }
+
+    private void HandleDashOnGroundTimer(float timeStep)
+    {
+        if (Controller.IsGrounded() && !Controller.IsSliding)
+            _dashOnGroundTimer -= timeStep;
     }
     #endregion
 }

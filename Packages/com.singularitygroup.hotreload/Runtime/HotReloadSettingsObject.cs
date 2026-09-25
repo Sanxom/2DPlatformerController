@@ -95,7 +95,7 @@ namespace SingularityGroup.HotReload {
 
         [Header(Localization.Translations.MenuItems.BuildSettings)]
         [Tooltip(Localization.Translations.MenuItems.IncludeInBuildTooltip)]
-        public bool IncludeInBuild = true;
+        public bool IncludeInBuild = false;
 
         [Header(Localization.Translations.MenuItems.PlayerSettings)]
         public bool AllowAndroidAppToMakeHttpRequests = false;

@@ -21,7 +21,7 @@ namespace SingularityGroup.HotReload.Editor.Localization {
             public static void LoadEnglish() {
                 // On-Device Settings
                 OnDeviceHeadline = "Make changes to a build running on-device";
-                OnDeviceManualConnectFormat = "If auto-pair fails, find your local IP in OS settings, and use this format to connect: '{ip}:{0}'";
+                OnDeviceManualConnectFormat = "If auto-pair fails, find your local IP in OS settings, and use this format to connect: '{{ip}}:{0}'";
                 OnDeviceManualConnectWithIP = "If auto-pair fails, use this IP and port to connect: {0}:{1}\nMake sure you are on the same LAN/WiFi network";
                 OnDeviceNetworkNote = "Make sure you are on the same LAN/WiFi network";
                 OnDeviceCheckHotReloadRunning = "Hot Reload is running";
@@ -40,7 +40,7 @@ namespace SingularityGroup.HotReload.Editor.Localization {
             public static void LoadSimplifiedChinese() {
                 // On-Device Settings
                 OnDeviceHeadline = "对在设备上运行的构建进行更改";
-                OnDeviceManualConnectFormat = "如果自动配对失败，请在操作系统设置中找到您的本地 IP，并使用此格式进行连接：'{ip}:{0}'";
+                OnDeviceManualConnectFormat = "如果自动配对失败，请在操作系统设置中找到您的本地 IP，并使用此格式进行连接：'{{ip}}:{0}'";
                 OnDeviceManualConnectWithIP = "如果自动配对失败，请使用此 IP 和端口进行连接：{0}:{1}\n确保您在同一个局域网/WiFi 网络中";
                 OnDeviceNetworkNote = "确保您在同一个局域网/WiFi 网络中";
                 OnDeviceCheckHotReloadRunning = "Hot Reload 正在运行";

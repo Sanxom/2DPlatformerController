@@ -24,6 +24,15 @@ public class PlayerMovementStats : ScriptableObject
     [field: SerializeField, Range(1f, 50f)] public float HeadBumpSlideSpeed { get; private set; } = 13f;
     [field: SerializeField, Range(0.01f, 1f)] public float HeadBumpBoxWidth { get; private set; } = 0.3f;
     [field: SerializeField, Range(0.01f, 1f)] public float HeadBumpBoxHeight { get; private set; } = 0.1f;
+    [field: SerializeField, Range(0f, 45f)] public float MaxSlopeAngleForHeadBump { get; private set; } = 5f;
+
+    [field: Header("Slopes")]
+    [field: SerializeField] public bool DashDirectionMatchesSlopeDireciton { get; private set; } = true;
+    [field: SerializeField] public bool CanJumpOnMaxSlopes { get; private set; } = false;
+    [field: SerializeField] public bool JumpFollowSlopesWhenHeadTouching { get; private set; } = true;
+    [field: SerializeField] public bool DashFollowSlopesWhenHeadTouching { get; private set; } = true;
+    [field: SerializeField, Range(0f, 90f)] public float MaxSlopeAngle { get; private set; } = 70f;
+    [field: SerializeField, Range(1f, 100f)] public float SlideSpeed { get; private set; } = 30f;
 
     [field: Header("Jump")]
     [field: SerializeField] public float JumpHeight { get; private set; } = 6.5f;
@@ -35,6 +44,7 @@ public class PlayerMovementStats : ScriptableObject
 
     [field: Header("Reset Jump Options")]
     [field: SerializeField] public bool ResetJumpsOnWallSlide { get; private set; } = true;
+    [field: SerializeField] public bool ResetAirJumpsOnMaxSlopeLand { get; private set; } = false;
 
     [field: Header("Jump Cut")]
     [field: SerializeField, Range(0.02f, 0.3f)] public float TimeForUpwardsCancel { get; private set; } = 0.027f;
@@ -50,8 +60,11 @@ public class PlayerMovementStats : ScriptableObject
     [field: SerializeField, Range(0f, 1f)] public float JumpCoyoteTime { get; private set; } = 0.1f;
 
     [field: Header("Wall Slide")]
+    [field: SerializeField] public bool CanWallSlideFacingAwayFromWall { get; private set; } = false;
     [field: SerializeField, Min(0.01f)] public float WallSlideSpeed { get; private set; } = 5f;
     [field: SerializeField, Range(0.25f, 50f)] public float WallSlideDecelerationSpeed { get; private set; } = 50f;
+    [field: SerializeField, Range(70f, 90f)] public float MinAngleForWallSlide { get; private set; } = 85f;
+    [field: SerializeField, Range(90f, 135f)] public float MaxAngleForWallSlide { get; private set; } = 95f;
 
     [field: Header("Wall Jump")]
     [field: SerializeField] public Vector2 WallJumpDirection { get; private set; } = new Vector2(-20f, 6.5f);
@@ -75,8 +88,11 @@ public class PlayerMovementStats : ScriptableObject
     [field: Header("Debug")]
     [field: SerializeField] public bool DebugShowIsGrounded { get; private set; }
     [field: SerializeField] public bool DebugShowHeadRays { get; private set; }
-    [field: SerializeField] public bool DebugShowWallHit { get; private set; }
     [field: SerializeField] public bool DebugShowHeadBumpBox { get; private set; }
+    [field: SerializeField] public bool DebugShowWallHit { get; private set; }
+    [field: SerializeField] public bool DebugShowDescendSlopeRay { get; private set; }
+    [field: SerializeField] public bool DebugShowSlopeNormal { get; private set; }
+    [field: SerializeField] public bool DebugShowDashAngle { get; private set; }
     [field: SerializeField, Range(0f, 1f)] public float ExtraRayDebugDistance { get; private set; } = 0.25f;
 
     [field: Header("Jump Visualization Tool")]

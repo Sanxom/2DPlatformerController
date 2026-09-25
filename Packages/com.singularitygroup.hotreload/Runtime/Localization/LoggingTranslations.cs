@@ -43,6 +43,8 @@ namespace SingularityGroup.HotReload.Localization {
 			public static string ExceptionHandlingMethodPatch;
 			public static string ExceptionApplyingPatch;
 			public static string ExceptionEnsureUnityEventMethod;
+			public static string ExceptionIsUnsupportedAddedOnValidate;
+			public static string ExceptionIsUnsupportedAddedScriptableObjectEventMethod;
 			public static string ExceptionRemoveUnityEventMethod;
 			public static string InvalidPath;
 			
@@ -65,6 +67,8 @@ namespace SingularityGroup.HotReload.Localization {
 			
 			// Unity Events
 			public static string SceneLoadedWithNewUnityEventMethods;
+			public static string AddedOnValidateUnsupported;
+			public static string AddedScriptableObjectEventUnsupported;
             
 			public static void LoadEnglish() {
 				HotReloadUnreachableDisconnecting = "Hot Reload was unreachable for {0} seconds, disconnecting";
@@ -98,6 +102,8 @@ namespace SingularityGroup.HotReload.Localization {
 				ExceptionHandlingMethodPatch = "Exception occured when handling method patch. Exception:";
 				ExceptionApplyingPatch = "Edit requires full recompile to apply: Encountered exception when applying a patch.\nCommon causes: editing code that failed to patch previously, an unsupported change, or a real bug in Hot Reload.\nIf you think this is a bug, please report the issue on Discord and include a code-snippet before/after.";
 				ExceptionEnsureUnityEventMethod = "Encountered exception in EnsureUnityEventMethod: {0} {1}";
+				ExceptionIsUnsupportedAddedOnValidate = "Encountered exception in IsUnsupportedAddedOnValidate: {0} {1}";
+				ExceptionIsUnsupportedAddedScriptableObjectEventMethod = "Encountered exception in IsUnsupportedAddedScriptableObjectEventMethod: {0} {1}";
 				ExceptionRemoveUnityEventMethod = "Encountered exception in RemoveUnityEventMethod: {0} {1}";
 				InvalidPath = "Invalid path: {0}";
 				
@@ -117,6 +123,8 @@ namespace SingularityGroup.HotReload.Localization {
 				HotReloadApplyTook = "Hot Reload apply took {0}";
 				
 				SceneLoadedWithNewUnityEventMethods = "A new Scene was loaded while new unity event methods were added at runtime. MonoBehaviours in the Scene will not trigger these new events.";
+				AddedOnValidateUnsupported = "An OnValidate method was added to {0}. Hot Reload doesn't support adding OnValidate methods to MonoBehaviours/ScriptableObjects. Unity will not invoke it until the next full recompile. After a full recompile, Hot Reload can patch the OnValidate method normally.";
+				AddedScriptableObjectEventUnsupported = "A {0} method was added to ScriptableObject {1}. Hot Reload doesn't support adding lifecycle methods (Awake, OnEnable, OnDisable, OnDestroy, OnValidate, Reset) to ScriptableObjects. Unity will not invoke it until the next full recompile. After a full recompile, Hot Reload can patch the {0} method normally.";
 			}
             
 			public static void LoadSimplifiedChinese() {
@@ -151,6 +159,8 @@ namespace SingularityGroup.HotReload.Localization {
 				ExceptionHandlingMethodPatch = "处理方法补丁时发生异常。异常：";
 				ExceptionApplyingPatch = "编辑需要完全重新编译才能应用：应用补丁时遇到异常。\n常见原因：编辑之前修补失败的代码、不支持的更改或 Hot Reload 中的真正错误。\n如果您认为这是一个错误，请在 Discord 上报告问题并附上之前/之后的代码片段。";
 				ExceptionEnsureUnityEventMethod = "在 EnsureUnityEventMethod 中遇到异常：{0} {1}";
+				ExceptionIsUnsupportedAddedOnValidate = "在 IsUnsupportedAddedOnValidate 中遇到异常：{0} {1}";
+				ExceptionIsUnsupportedAddedScriptableObjectEventMethod = "在 IsUnsupportedAddedScriptableObjectEventMethod 中遇到异常：{0} {1}";
 				ExceptionRemoveUnityEventMethod = "在 RemoveUnityEventMethod 中遇到异常：{0} {1}";
 				InvalidPath = "无效路径：{0}";
 
@@ -170,6 +180,8 @@ namespace SingularityGroup.HotReload.Localization {
 				HotReloadApplyTook = "Hot Reload 应用耗时 {0}";
 
 				SceneLoadedWithNewUnityEventMethods = "在运行时添加新的 unity 事件方法时加载了新场景。场景中的 MonoBehaviours 不会触发这些新事件。";
+				AddedOnValidateUnsupported = "向 {0} 添加了 OnValidate 方法。Hot Reload 不支持向 MonoBehaviour/ScriptableObject 添加 OnValidate 方法。Unity 要在下一次完整重新编译之后才会调用它。完整重新编译后，Hot Reload 可正常修补 OnValidate 方法。";
+				AddedScriptableObjectEventUnsupported = "向 ScriptableObject {1} 添加了 {0} 方法。Hot Reload 不支持向 ScriptableObject 添加生命周期方法（Awake、OnEnable、OnDisable、OnDestroy、OnValidate、Reset）。Unity 要在下一次完整重新编译之后才会调用它。完整重新编译后，Hot Reload 可正常修补 {0} 方法。";
 			}
 		}
 	}

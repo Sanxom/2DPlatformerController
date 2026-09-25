@@ -21,6 +21,10 @@ namespace SingularityGroup.HotReload.Editor.Cli {
         
         //InitializeOnLoad ensures controller gets initialized on unity thread
         static HotReloadCli() {
+            if (MultiplayerPlaymodeHelper.IsClone) {
+                controller = new FallbackCliController();
+                return;
+            }
             controller =
     #if UNITY_EDITOR_OSX
                 new OsxCliController();
@@ -44,15 +48,46 @@ namespace SingularityGroup.HotReload.Editor.Cli {
                 exposeServerToNetwork: HotReloadPrefs.ExposeServerToLocalNetwork, 
                 allAssetChanges: HotReloadPrefs.AllAssetChanges, 
                 createNoWindow: HotReloadPrefs.DisableConsoleWindow,
-                detailedErrorReporting: !HotReloadPrefs.DisableDetailedErrorReporting
+#if UNITY_EDITOR_WIN
+                useWatchman: HotReloadPrefs.UseWatchman,
+#endif
+                detailedErrorReporting: !HotReloadPrefs.DisableDetailedErrorReporting,
+                disableTelemetry: HotReloadPrefs.DisableTelemetry
             );
         }
         
-        internal static async Task StartAsync(bool exposeServerToNetwork, bool allAssetChanges, bool createNoWindow, bool isReleaseMode, bool detailedErrorReporting, LoginData loginData = null) {
+        internal static async Task StartAsync(
+            bool exposeServerToNetwork, 
+            bool allAssetChanges, 
+            bool createNoWindow, 
+            bool isReleaseMode, 
+            bool detailedErrorReporting, 
+            bool disableTelemetry,
+#if UNITY_EDITOR_WIN 
+            bool useWatchman = true,
+#endif
+            LoginData loginData = null
+) {
+            if (controller.PlatformName == "") {
+                return;
+            }
             var port = await Prepare().ConfigureAwait(false);
             await ThreadUtility.SwitchToThreadPool();
             StartArgs args;
-            if (TryGetStartArgs(UnityHelper.DataPath, exposeServerToNetwork, allAssetChanges, createNoWindow, isReleaseMode, detailedErrorReporting, loginData, port, out args)) {
+            if (TryGetStartArgs(
+                    UnityHelper.DataPath, 
+                    exposeServerToNetwork, 
+                    allAssetChanges, 
+                    createNoWindow, 
+                    isReleaseMode, 
+                    detailedErrorReporting, 
+                    disableTelemetry,
+                    loginData, 
+                    port, 
+#if UNITY_EDITOR_WIN 
+                    useWatchman,
+#endif
+                    out args)) {
                 await controller.Start(args);
             }
         }
@@ -73,7 +108,21 @@ namespace SingularityGroup.HotReload.Editor.Cli {
 #pragma warning restore CS0649
         }
         
-        static bool TryGetStartArgs(string dataPath, bool exposeServerToNetwork, bool allAssetChanges, bool createNoWindow, bool isReleaseMode, bool detailedErrorReporting, LoginData loginData, int port, out StartArgs args) {
+        static bool TryGetStartArgs(
+            string dataPath, 
+            bool exposeServerToNetwork, 
+            bool allAssetChanges, 
+            bool createNoWindow, 
+            bool isReleaseMode, 
+            bool detailedErrorReporting, 
+            bool disableTelemetry,
+            LoginData loginData, 
+            int port, 
+#if UNITY_EDITOR_WIN 
+            bool useWatchman,
+#endif
+            out StartArgs args
+        ) {
             string serverDir;
             if(!CliUtils.TryFindServerDir(out serverDir)) {
                 Log.Warning(string.Format(Translations.Errors.WarningFailedToStartServer, 
@@ -85,7 +134,11 @@ namespace SingularityGroup.HotReload.Editor.Cli {
             
             Config config;
             if (File.Exists(PackageConst.ConfigFileName)) {
-                config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(PackageConst.ConfigFileName));
+                try {
+                    config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(PackageConst.ConfigFileName));
+                } catch {
+                    config = new Config();
+                }
             } else {
                 config = new Config();
             }
@@ -121,10 +174,16 @@ namespace SingularityGroup.HotReload.Editor.Cli {
             }
             
             var searchAssemblies = string.Join(";", CodePatcher.I.GetAssemblySearchPaths());
-            var cliArguments = $@"-u ""{unityProjDir}"" -s ""{slnPath}"" -t ""{cliTempDir}"" -a ""{searchAssemblies}"" -ver ""{PackageConst.Version}"" -proc ""{Process.GetCurrentProcess().Id}"" -assets ""{allAssetChanges}"" -p ""{port}"" -r {isReleaseMode} -detailed-error-reporting {detailedErrorReporting}";
+            var cliArguments = $@"-u ""{unityProjDir}"" -s ""{slnPath}"" -t ""{cliTempDir}"" -a ""{searchAssemblies}"" -ver ""{PackageConst.Version}"" -proc ""{Process.GetCurrentProcess().Id}"" -assets ""{allAssetChanges}"" -p ""{port}"" -r {isReleaseMode} -detailed-error-reporting {detailedErrorReporting} -default-locale {PackageConst.DefaultLocale}";
             if (loginData != null) {
                 cliArguments += $@" -email ""{loginData.email}"" -pass ""{loginData.password}""";
             }
+            if (disableTelemetry) {
+                cliArguments += $@" -disableTelemetry true";
+            }
+            #if UNITY_EDITOR_WIN
+            cliArguments += $@" -w ""{useWatchman}""";
+            #endif
             if (exposeServerToNetwork) {
                 // server will listen on local network interface (default is localhost only)
                 cliArguments += " -e true";
@@ -195,7 +254,8 @@ namespace SingularityGroup.HotReload.Editor.Cli {
             
             var port = DiscoverFreePort();
             HotReloadState.ServerPort = port;
-            RequestHelper.SetServerPort(port);
+            var serverInfo = RequestHelper.SetServerPort(port);
+            await Task.Run(() => File.WriteAllText(Path.Combine(PackageConst.LibraryCachePath, PackageConst.ServerInfoFileName), JsonConvert.SerializeObject(serverInfo)));
             return port;
         }
 

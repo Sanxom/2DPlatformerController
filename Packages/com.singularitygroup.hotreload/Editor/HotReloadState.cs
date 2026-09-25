@@ -14,6 +14,12 @@ namespace SingularityGroup.HotReload.Editor {
         private const string RecompiledUnsupportedChangesInPlaymodeKey = "HotReloadWindow.RecompiledUnsupportedChangesInPlaymode";
         private const string EditorCodePatcherInitKey = "HotReloadWindow.EditorCodePatcherInit";
         private const string ShowedDebuggerCompatibilityKey = "HotReloadWindow.ShowedDebuggerCompatibility";
+        private const string DisallowedAutoRefreshKey = "HotReloadWindow.DisallowedAutoRefresh";
+        private const string WarnedDebuggerAttachedKey = "HotReloadWindow.WarnedDebuggerAttached";
+        private const string EditorAssemblyNamesKey = "HotReloadWindow.EditorAssemblyNames";
+        private const string PlayerAssemblyNamesKey = "HotReloadWindow.PlayerAssemblyNames";
+        private const string OmittedAssembliesKey = "HotReloadWindow.OmittedAssemblies";
+        private const string CompileSessionIdKey = "HotReloadWindow.CompileSessionId";
         
 
         public static int ServerPort {
@@ -74,6 +80,36 @@ namespace SingularityGroup.HotReload.Editor {
         public static bool ShowedDebuggerCompatibility {
             get { return SessionState.GetBool(ShowedDebuggerCompatibilityKey, false); }
             set { SessionState.SetBool(ShowedDebuggerCompatibilityKey, value); }
+        }
+        
+        public static bool DisallowedAutoRefresh {
+            get { return SessionState.GetBool(DisallowedAutoRefreshKey, false); }
+            set { SessionState.SetBool(DisallowedAutoRefreshKey, value); }
+        }
+        
+        public static bool WarnedDebuggerAttached {
+            get { return SessionState.GetBool(WarnedDebuggerAttachedKey, false); }
+            set { SessionState.SetBool(WarnedDebuggerAttachedKey, value); }
+        }
+            
+        public static string EditorAssemblyNames {
+            get { return SessionState.GetString(EditorAssemblyNamesKey, ""); }
+            set { SessionState.SetString(EditorAssemblyNamesKey, value); }
+        }
+        
+        public static string PlayerAssemblyNames {
+            get { return SessionState.GetString(PlayerAssemblyNamesKey, ""); }
+            set { SessionState.SetString(PlayerAssemblyNamesKey, value); }
+        }
+        
+        public static string OmittedAssemblies {
+            get { return SessionState.GetString(OmittedAssembliesKey, ""); }
+            set { SessionState.SetString(OmittedAssembliesKey, value); }
+        }
+        
+        public static string CompileSessionId {
+            get { return SessionState.GetString(CompileSessionIdKey, ""); }
+            set { SessionState.SetString(CompileSessionIdKey, value); }
         }
     }
 

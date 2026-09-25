@@ -46,6 +46,7 @@ namespace SingularityGroup.HotReload.Editor.Localization {
             public static string IndicationPartiallySupported;
             public static string IndicationUnsupported;
             public static string IndicationPatching;
+            public static string IndicationDisabledDuringDebugging;
             public static string IndicationCompiling;
             public static string IndicationCompileErrors;
             public static string IndicationActivationFailed;
@@ -82,8 +83,8 @@ namespace SingularityGroup.HotReload.Editor.Localization {
                 // Daily Session
                 DailySessionStart = "Daily Session: Make code changes to start";
                 DailySessionTimeHoursLeft = "Daily Session: {0}h {1}m Left";
-                DailySessionTimeMinutesLeft = "Daily Session: {1}m Left";
-                DailySessionNextSessionMinutes = "Next Session: {1}m";
+                DailySessionTimeMinutesLeft = "Daily Session: {0}m Left";
+                DailySessionNextSessionMinutes = "Next Session: {0}m";
                 DailySessionNextSessionHours = "Next Session: {0}h {1}m";
                 
                 // Indication Status Messages
@@ -98,6 +99,7 @@ namespace SingularityGroup.HotReload.Editor.Localization {
                 IndicationPartiallySupported = "Changes partially applied";
                 IndicationUnsupported = "Finished with warnings";
                 IndicationPatching = "Reloading";
+                IndicationDisabledDuringDebugging = "Disabled during debugging";
                 IndicationCompiling = "Compiling";
                 IndicationCompileErrors = "Scripts have compile errors";
                 IndicationActivationFailed = "Activation failed";
@@ -135,8 +137,8 @@ namespace SingularityGroup.HotReload.Editor.Localization {
                 // Daily Session
                 DailySessionStart = "每日会话：进行代码更改以开始";
                 DailySessionTimeHoursLeft = "每日会话：剩余 {0}h {1}m";
-                DailySessionTimeMinutesLeft = "每日会话：剩余 {1}m";
-                DailySessionNextSessionMinutes = "下一会话：{1}m";
+                DailySessionTimeMinutesLeft = "每日会话：剩余 {0}m";
+                DailySessionNextSessionMinutes = "下一会话：{0}m";
                 DailySessionNextSessionHours = "下一会话：{0}h {1}m";
 
                 // Indication Status Messages
@@ -153,6 +155,7 @@ namespace SingularityGroup.HotReload.Editor.Localization {
                 IndicationPatching = "正在重新加载";
                 IndicationCompiling = "正在编译";
                 IndicationCompileErrors = "脚本有编译错误";
+                IndicationDisabledDuringDebugging = "调试期间已禁用";
                 IndicationActivationFailed = "激活失败";
                 IndicationLoading = "正在加载";
                 IndicationUndetected = "未应用任何更改";

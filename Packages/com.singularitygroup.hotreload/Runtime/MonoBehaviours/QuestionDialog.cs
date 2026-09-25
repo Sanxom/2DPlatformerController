@@ -1,6 +1,7 @@
 #if ENABLE_MONO && (DEVELOPMENT_BUILD || UNITY_EDITOR)
 using System;
 using System.Threading.Tasks;
+using SingularityGroup.HotReload.DTO;
 using SingularityGroup.HotReload.Localization;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,6 +18,7 @@ namespace SingularityGroup.HotReload {
         public Button buttonCancel;
         public Button buttonMoreInfo;
         
+        [NonSerialized]
         public TaskCompletionSource<bool> completion = new TaskCompletionSource<bool>();
 
         public void UpdateView(Config config) {
